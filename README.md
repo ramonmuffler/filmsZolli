@@ -36,7 +36,7 @@ pnpm dev
 Danach:
 
 - Backend: http://localhost:8080
-- Frontend: http://127.0.0.1:5173
+- Frontend: http://localhost:5173
 - MongoDB: localhost:27018
 
 ## API
@@ -47,6 +47,8 @@ Danach:
 - `GET|PUT|DELETE /api/categories/{id}`
 - `GET|POST /api/users`
 - `GET|PUT|DELETE /api/users/{id}`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
 - `GET|POST /api/ratings`
 - `GET|PUT|DELETE /api/ratings/{id}`
 - `GET|POST /api/watched`

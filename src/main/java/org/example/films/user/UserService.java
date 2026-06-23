@@ -7,6 +7,7 @@ import org.example.films.common.NotFoundException;
 import org.example.films.content.ContentService;
 import org.example.films.rating.RatingRepository;
 import org.example.films.watched.WatchedRepository;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,6 +17,7 @@ public class UserService {
     private final RatingRepository ratingRepository;
     private final WatchedRepository watchedRepository;
     private final ContentService contentService;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public UserService(
             UserRepository userRepository,
@@ -39,14 +41,22 @@ public class UserService {
     }
 
     public AppUser create(UserRequest request) {
+        ensureUnique(request.username(), request.email(), null);
         AppUser user = new AppUser();
         apply(user, request);
+        if (request.password() != null && !request.password().isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(request.password()));
+        }
         return userRepository.save(user);
     }
 
     public AppUser update(String id, UserRequest request) {
         AppUser user = get(id);
+        ensureUnique(request.username(), request.email(), id);
         apply(user, request);
+        if (request.password() != null && !request.password().isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(request.password()));
+        }
         return userRepository.save(user);
     }
 
@@ -66,5 +76,18 @@ public class UserService {
         user.setUsername(request.username().trim());
         user.setEmail(request.email().trim());
         user.setRegistrationDate(request.registrationDate() == null ? Instant.now() : request.registrationDate());
+    }
+
+    private void ensureUnique(String username, String email, String ownId) {
+        userRepository.findByUsernameIgnoreCase(username.trim())
+                .filter(existing -> !existing.getId().equals(ownId))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException("Dieser Username ist bereits vergeben.");
+                });
+        userRepository.findByEmailIgnoreCase(email.trim())
+                .filter(existing -> !existing.getId().equals(ownId))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException("Diese E-Mail ist bereits registriert.");
+                });
     }
 }

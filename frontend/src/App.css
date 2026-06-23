@@ -104,14 +104,16 @@ h2 {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(112px, 1fr));
+  grid-template-columns: repeat(4, minmax(112px, 1fr));
   gap: 8px;
   margin: 20px 0;
 }
 
 .tab,
 .icon-button,
-.primary-button {
+.primary-button,
+.secondary-button,
+.auth-toggle button {
   border: 1px solid transparent;
   border-radius: 8px;
   transition:
@@ -153,7 +155,9 @@ h2 {
 
 .icon-button:hover,
 .tab:hover,
-.primary-button:hover {
+.primary-button:hover,
+.secondary-button:hover,
+.auth-toggle button:hover {
   transform: translateY(-1px);
 }
 
@@ -171,6 +175,91 @@ h2 {
   background: #b6462c;
   color: #ffffff;
   border-color: #b6462c;
+  font-weight: 700;
+}
+
+.secondary-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: #113f3a;
+  border-color: #c8d6d2;
+  font-weight: 700;
+}
+
+.auth-strip {
+  margin: 18px 0 0;
+  padding: 14px;
+  border: 1px solid #ded8cf;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(24, 31, 32, 0.06);
+}
+
+.auth-form {
+  display: grid;
+  grid-template-columns: auto repeat(2, minmax(180px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.auth-toggle {
+  min-height: 42px;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid #d8d1c5;
+  border-radius: 8px;
+  background: #f6f2ea;
+}
+
+.auth-toggle button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  background: transparent;
+  color: #425052;
+}
+
+.auth-toggle .toggle-active {
+  background: #113f3a;
+  color: #ffffff;
+}
+
+.signed-in {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.signed-in > div {
+  display: grid;
+  gap: 3px;
+}
+
+.auth-label {
+  color: #6d7371;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.auth-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e3d3a9;
+  border-radius: 7px;
+  background: #fff8e7;
+  color: #715616;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
@@ -402,6 +491,15 @@ tr:last-child td {
   .tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .auth-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auth-toggle,
+  .auth-form .primary-button {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 640px) {
@@ -426,12 +524,18 @@ tr:last-child td {
   }
 
   .tabs,
-  .form-grid {
+  .form-grid,
+  .auth-form {
     grid-template-columns: 1fr;
   }
 
   .tab {
     justify-content: flex-start;
+  }
+
+  .signed-in {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   table {

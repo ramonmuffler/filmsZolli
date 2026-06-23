@@ -2,6 +2,8 @@ package org.example.films.user;
 
 import java.time.Instant;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -13,6 +15,8 @@ public class AppUser {
 
     private String username;
     private String email;
+    @JsonIgnore
+    private String passwordHash;
     private Instant registrationDate;
 
     public AppUser() {
@@ -40,6 +44,14 @@ public class AppUser {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 
     public Instant getRegistrationDate() {

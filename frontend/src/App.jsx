@@ -3,13 +3,15 @@ import {
   Edit3,
   Eye,
   Film,
+  LogIn,
+  LogOut,
   Plus,
   RefreshCw,
   Save,
   Star,
   Tags,
   Trash2,
-  Users,
+  UserPlus,
   X,
 } from "lucide-react";
 import { api } from "./api";
@@ -25,8 +27,7 @@ const endpoints = {
 const tabs = [
   { id: "contents", label: "Inhalte", icon: Film },
   { id: "categories", label: "Kategorien", icon: Tags },
-  { id: "users", label: "Benutzer", icon: Users },
-  { id: "ratings", label: "Bewertungen", icon: Star },
+  { id: "ratings", label: "Bewerten", icon: Star },
   { id: "watched", label: "Gesehen", icon: Eye },
 ];
 
@@ -58,20 +59,19 @@ const defaultForms = () => ({
   category: {
     name: "",
   },
-  user: {
+  auth: {
     username: "",
     email: "",
-    registrationDate: nowLocal(),
+    password: "",
+    usernameOrEmail: "",
   },
   rating: {
-    userId: "",
     contentId: "",
     stars: 5,
     comment: "",
     ratingDate: nowLocal(),
   },
   watched: {
-    userId: "",
     contentId: "",
     watchedDate: nowLocal(),
   },
@@ -79,6 +79,11 @@ const defaultForms = () => ({
 
 function App() {
   const [activeTab, setActiveTab] = useState("contents");
+  const [authMode, setAuthMode] = useState("login");
+  const [currentUser, setCurrentUser] = useState(() => {
+    const stored = localStorage.getItem("films-current-user");
+    return stored ? JSON.parse(stored) : null;
+  });
   const [data, setData] = useState({
     contents: [],
     categories: [],
@@ -163,6 +168,39 @@ function App() {
     }
   }
 
+  async function submitAuth(event) {
+    event.preventDefault();
+    setError("");
+    try {
+      const path = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
+      const body =
+        authMode === "login"
+          ? {
+              usernameOrEmail: forms.auth.usernameOrEmail,
+              password: forms.auth.password,
+            }
+          : {
+              username: forms.auth.username,
+              email: forms.auth.email,
+              password: forms.auth.password,
+            };
+      const user = await api.create(path, body);
+      setCurrentUser(user);
+      localStorage.setItem("films-current-user", JSON.stringify(user));
+      resetForm("auth");
+      setStatus(authMode === "login" ? "Eingeloggt" : "Registriert");
+      await loadAll();
+    } catch (exception) {
+      setError(exception.message);
+    }
+  }
+
+  function logout() {
+    setCurrentUser(null);
+    localStorage.removeItem("films-current-user");
+    setStatus("Ausgeloggt");
+  }
+
   async function removeItem(collectionName, id) {
     if (!window.confirm("Diesen Eintrag loeschen?")) {
       return;
@@ -194,21 +232,10 @@ function App() {
     updateForm("category", { name: category.name ?? "" });
   }
 
-  function editUser(user) {
-    setActiveTab("users");
-    setEditing((current) => ({ ...current, user: user.id }));
-    updateForm("user", {
-      username: user.username ?? "",
-      email: user.email ?? "",
-      registrationDate: toLocalInput(user.registrationDate),
-    });
-  }
-
   function editRating(rating) {
     setActiveTab("ratings");
     setEditing((current) => ({ ...current, rating: rating.id }));
     updateForm("rating", {
-      userId: rating.userId ?? "",
       contentId: rating.contentId ?? "",
       stars: rating.stars ?? 5,
       comment: rating.comment ?? "",
@@ -220,7 +247,6 @@ function App() {
     setActiveTab("watched");
     setEditing((current) => ({ ...current, watched: watched.id }));
     updateForm("watched", {
-      userId: watched.userId ?? "",
       contentId: watched.contentId ?? "",
       watchedDate: toLocalInput(watched.watchedDate),
     });
@@ -231,7 +257,7 @@ function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Filme & Serien</p>
-          <h1>Datenverwaltung</h1>
+          <h1>Films</h1>
         </div>
         <div className="topbar-actions">
           <span className={error ? "status status-error" : "status"}>{error || status}</span>
@@ -240,6 +266,87 @@ function App() {
           </button>
         </div>
       </header>
+
+      <section className="auth-strip">
+        {currentUser ? (
+          <div className="signed-in">
+            <div>
+              <span className="auth-label">Angemeldet als</span>
+              <strong>{currentUser.username}</strong>
+            </div>
+            <button className="secondary-button" type="button" onClick={logout}>
+              <LogOut size={18} />
+              <span>Logout</span>
+            </button>
+          </div>
+        ) : (
+          <form className="auth-form" onSubmit={submitAuth}>
+            <div className="auth-toggle" role="group" aria-label="Authentifizierung">
+              <button
+                className={authMode === "login" ? "toggle-active" : ""}
+                type="button"
+                onClick={() => setAuthMode("login")}
+              >
+                <LogIn size={17} />
+                <span>Login</span>
+              </button>
+              <button
+                className={authMode === "register" ? "toggle-active" : ""}
+                type="button"
+                onClick={() => setAuthMode("register")}
+              >
+                <UserPlus size={17} />
+                <span>Registrieren</span>
+              </button>
+            </div>
+            {authMode === "register" && (
+              <>
+                <label>
+                  Username
+                  <input
+                    required
+                    value={forms.auth.username}
+                    onChange={(event) => updateForm("auth", { username: event.target.value })}
+                  />
+                </label>
+                <label>
+                  E-Mail
+                  <input
+                    required
+                    type="email"
+                    value={forms.auth.email}
+                    onChange={(event) => updateForm("auth", { email: event.target.value })}
+                  />
+                </label>
+              </>
+            )}
+            {authMode === "login" && (
+              <label>
+                Username oder E-Mail
+                <input
+                  required
+                  value={forms.auth.usernameOrEmail}
+                  onChange={(event) => updateForm("auth", { usernameOrEmail: event.target.value })}
+                />
+              </label>
+            )}
+            <label>
+              Passwort
+              <input
+                required
+                minLength="6"
+                type="password"
+                value={forms.auth.password}
+                onChange={(event) => updateForm("auth", { password: event.target.value })}
+              />
+            </label>
+            <button className="primary-button" type="submit">
+              {authMode === "login" ? <LogIn size={18} /> : <UserPlus size={18} />}
+              <span>{authMode === "login" ? "Einloggen" : "Account erstellen"}</span>
+            </button>
+          </form>
+        )}
+      </section>
 
       <nav className="tabs" aria-label="Bereiche">
         {tabs.map((tab) => {
@@ -437,85 +544,6 @@ function App() {
         </section>
       )}
 
-      {activeTab === "users" && (
-        <section className="workspace">
-          <form
-            className="panel editor"
-            onSubmit={(event) =>
-              saveItem(event, "user", "users", {
-                ...forms.user,
-                registrationDate: toIso(forms.user.registrationDate),
-              })
-            }
-          >
-            <PanelHeader
-              icon={Users}
-              title={editing.user ? "Benutzer bearbeiten" : "Benutzer erstellen"}
-              editing={editing.user}
-              onCancel={() => resetForm("user")}
-            />
-            <div className="form-grid">
-              <label>
-                Username
-                <input
-                  required
-                  value={forms.user.username}
-                  onChange={(event) => updateForm("user", { username: event.target.value })}
-                />
-              </label>
-              <label>
-                E-Mail
-                <input
-                  required
-                  type="email"
-                  value={forms.user.email}
-                  onChange={(event) => updateForm("user", { email: event.target.value })}
-                />
-              </label>
-              <label>
-                Registrierung
-                <input
-                  type="datetime-local"
-                  value={forms.user.registrationDate}
-                  onChange={(event) => updateForm("user", { registrationDate: event.target.value })}
-                />
-              </label>
-            </div>
-            <ActionButton editing={editing.user} />
-          </form>
-
-          <div className="panel table-panel">
-            <TableTitle title="Benutzer" count={data.users.length} />
-            <table>
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>E-Mail</th>
-                  <th>Registriert</th>
-                  <th aria-label="Aktionen" />
-                </tr>
-              </thead>
-              <tbody>
-                {data.users.map((user) => (
-                  <tr key={user.id}>
-                    <td>
-                      <strong>{user.username}</strong>
-                    </td>
-                    <td>{user.email}</td>
-                    <td>{formatDate(user.registrationDate)}</td>
-                    <RowActions
-                      onEdit={() => editUser(user)}
-                      onDelete={() => removeItem("users", user.id)}
-                    />
-                  </tr>
-                ))}
-                <EmptyRow visible={data.users.length === 0} columns={4} label="Noch keine Benutzer" />
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
       {activeTab === "ratings" && (
         <section className="workspace">
           <form
@@ -523,6 +551,7 @@ function App() {
             onSubmit={(event) =>
               saveItem(event, "rating", "ratings", {
                 ...forms.rating,
+                userId: currentUser?.id,
                 stars: Number(forms.rating.stars),
                 ratingDate: toIso(forms.rating.ratingDate),
               })
@@ -534,22 +563,8 @@ function App() {
               editing={editing.rating}
               onCancel={() => resetForm("rating")}
             />
+            {!currentUser && <p className="auth-note">Bitte einloggen, um Bewertungen zu speichern.</p>}
             <div className="form-grid">
-              <label>
-                Benutzer
-                <select
-                  required
-                  value={forms.rating.userId}
-                  onChange={(event) => updateForm("rating", { userId: event.target.value })}
-                >
-                  <option value="">Auswahl</option>
-                  {data.users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.username}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <label>
                 Inhalt
                 <select
@@ -593,7 +608,7 @@ function App() {
                 />
               </label>
             </div>
-            <ActionButton editing={editing.rating} disabled={!data.users.length || !data.contents.length} />
+            <ActionButton editing={editing.rating} disabled={!currentUser || !data.contents.length} />
           </form>
 
           <div className="panel table-panel">
@@ -635,6 +650,7 @@ function App() {
             onSubmit={(event) =>
               saveItem(event, "watched", "watched", {
                 ...forms.watched,
+                userId: currentUser?.id,
                 watchedDate: toIso(forms.watched.watchedDate),
               })
             }
@@ -645,22 +661,8 @@ function App() {
               editing={editing.watched}
               onCancel={() => resetForm("watched")}
             />
+            {!currentUser && <p className="auth-note">Bitte einloggen, um Inhalte als gesehen zu markieren.</p>}
             <div className="form-grid">
-              <label>
-                Benutzer
-                <select
-                  required
-                  value={forms.watched.userId}
-                  onChange={(event) => updateForm("watched", { userId: event.target.value })}
-                >
-                  <option value="">Auswahl</option>
-                  {data.users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.username}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <label>
                 Inhalt
                 <select
@@ -685,7 +687,7 @@ function App() {
                 />
               </label>
             </div>
-            <ActionButton editing={editing.watched} disabled={!data.users.length || !data.contents.length} />
+            <ActionButton editing={editing.watched} disabled={!currentUser || !data.contents.length} />
           </form>
 
           <div className="panel table-panel">
