@@ -3,6 +3,8 @@ import {
   Edit3,
   Eye,
   Film,
+  Filter,
+  Heart,
   LogIn,
   LogOut,
   Plus,
@@ -22,6 +24,7 @@ const endpoints = {
   users: "/api/users",
   ratings: "/api/ratings",
   watched: "/api/watched",
+  favorites: "/api/favorites",
 };
 
 const tabs = [
@@ -29,6 +32,7 @@ const tabs = [
   { id: "categories", label: "Kategorien", icon: Tags },
   { id: "ratings", label: "Bewerten", icon: Star },
   { id: "watched", label: "Gesehen", icon: Eye },
+  { id: "favorites", label: "Favoriten", icon: Heart },
 ];
 
 const nowLocal = () => {
@@ -75,7 +79,32 @@ const defaultForms = () => ({
     contentId: "",
     watchedDate: nowLocal(),
   },
+  favorite: {
+    contentId: "",
+    favoriteDate: nowLocal(),
+  },
 });
+
+const defaultFilters = () => ({
+  categoryId: "",
+  type: "",
+  minRating: "",
+});
+
+const buildContentPath = (filters) => {
+  const params = new URLSearchParams();
+  if (filters.categoryId) {
+    params.set("categoryId", filters.categoryId);
+  }
+  if (filters.type) {
+    params.set("type", filters.type);
+  }
+  if (filters.minRating) {
+    params.set("minRating", filters.minRating);
+  }
+  const query = params.toString();
+  return query ? `${endpoints.contents}?${query}` : endpoints.contents;
+};
 
 function App() {
   const [activeTab, setActiveTab] = useState("contents");
@@ -90,8 +119,10 @@ function App() {
     users: [],
     ratings: [],
     watched: [],
+    favorites: [],
   });
   const [forms, setForms] = useState(defaultForms);
+  const [filters, setFilters] = useState(defaultFilters);
   const [editing, setEditing] = useState({});
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
@@ -114,12 +145,15 @@ function App() {
     loadAll();
   }, []);
 
-  async function loadAll() {
+  async function loadAll(activeFilters = filters) {
     setLoading(true);
     setError("");
     try {
       const entries = await Promise.all(
-        Object.entries(endpoints).map(async ([key, path]) => [key, await api.list(path)])
+        Object.entries(endpoints).map(async ([key, path]) => [
+          key,
+          await api.list(key === "contents" ? buildContentPath(activeFilters) : path),
+        ])
       );
       setData(Object.fromEntries(entries));
       setStatus("Aktualisiert");
@@ -139,6 +173,24 @@ function App() {
         ...patch,
       },
     }));
+  }
+
+  function updateFilter(patch) {
+    setFilters((current) => ({
+      ...current,
+      ...patch,
+    }));
+  }
+
+  async function applyFilters(event) {
+    event.preventDefault();
+    await loadAll(filters);
+  }
+
+  async function resetFilters() {
+    const emptyFilters = defaultFilters();
+    setFilters(emptyFilters);
+    await loadAll(emptyFilters);
   }
 
   function resetForm(formName) {
@@ -249,6 +301,15 @@ function App() {
     updateForm("watched", {
       contentId: watched.contentId ?? "",
       watchedDate: toLocalInput(watched.watchedDate),
+    });
+  }
+
+  function editFavorite(favorite) {
+    setActiveTab("favorites");
+    setEditing((current) => ({ ...current, favorite: favorite.id }));
+    updateForm("favorite", {
+      contentId: favorite.contentId ?? "",
+      favoriteDate: toLocalInput(favorite.favoriteDate),
     });
   }
 
@@ -446,6 +507,53 @@ function App() {
 
           <div className="panel table-panel">
             <TableTitle title="Inhalte" count={data.contents.length} />
+            <form className="filter-bar" onSubmit={applyFilters}>
+              <label>
+                Kategorie
+                <select
+                  value={filters.categoryId}
+                  onChange={(event) => updateFilter({ categoryId: event.target.value })}
+                >
+                  <option value="">Alle</option>
+                  {data.categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Typ
+                <select
+                  value={filters.type}
+                  onChange={(event) => updateFilter({ type: event.target.value })}
+                >
+                  <option value="">Alle</option>
+                  <option value="FILM">Film</option>
+                  <option value="SERIE">Serie</option>
+                </select>
+              </label>
+              <label>
+                Mindestrating
+                <input
+                  min="0"
+                  max="5"
+                  step="0.5"
+                  type="number"
+                  value={filters.minRating}
+                  onChange={(event) => updateFilter({ minRating: event.target.value })}
+                />
+              </label>
+              <div className="filter-actions">
+                <button className="secondary-button" type="submit">
+                  <Filter size={18} />
+                  <span>Filtern</span>
+                </button>
+                <button className="icon-button" type="button" onClick={resetFilters} title="Filter zuruecksetzen">
+                  <X size={18} />
+                </button>
+              </div>
+            </form>
             <table>
               <thead>
                 <tr>
@@ -454,6 +562,7 @@ function App() {
                   <th>Jahr</th>
                   <th>Kategorien</th>
                   <th>Rating</th>
+                  <th>Favoriten</th>
                   <th aria-label="Aktionen" />
                 </tr>
               </thead>
@@ -472,13 +581,19 @@ function App() {
                       />
                     </td>
                     <td>{Number(content.averageRating ?? 0).toFixed(1)}</td>
+                    <td>
+                      {
+                        data.favorites.filter((favorite) => favorite.contentId === content.id)
+                          .length
+                      }
+                    </td>
                     <RowActions
                       onEdit={() => editContent(content)}
                       onDelete={() => removeItem("contents", content.id)}
                     />
                   </tr>
                 ))}
-                <EmptyRow visible={data.contents.length === 0} columns={6} label="Noch keine Inhalte" />
+                <EmptyRow visible={data.contents.length === 0} columns={7} label="Noch keine Inhalte" />
               </tbody>
             </table>
           </div>
@@ -714,6 +829,83 @@ function App() {
                   </tr>
                 ))}
                 <EmptyRow visible={data.watched.length === 0} columns={4} label="Noch keine Eintraege" />
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {activeTab === "favorites" && (
+        <section className="workspace">
+          <form
+            className="panel editor"
+            onSubmit={(event) =>
+              saveItem(event, "favorite", "favorites", {
+                ...forms.favorite,
+                userId: currentUser?.id,
+                favoriteDate: toIso(forms.favorite.favoriteDate),
+              })
+            }
+          >
+            <PanelHeader
+              icon={Heart}
+              title={editing.favorite ? "Favorit bearbeiten" : "Favorit hinzufuegen"}
+              editing={editing.favorite}
+              onCancel={() => resetForm("favorite")}
+            />
+            {!currentUser && <p className="auth-note">Bitte einloggen, um Favoriten zu speichern.</p>}
+            <div className="form-grid">
+              <label>
+                Inhalt
+                <select
+                  required
+                  value={forms.favorite.contentId}
+                  onChange={(event) => updateForm("favorite", { contentId: event.target.value })}
+                >
+                  <option value="">Auswahl</option>
+                  {data.contents.map((content) => (
+                    <option key={content.id} value={content.id}>
+                      {content.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Datum
+                <input
+                  type="datetime-local"
+                  value={forms.favorite.favoriteDate}
+                  onChange={(event) => updateForm("favorite", { favoriteDate: event.target.value })}
+                />
+              </label>
+            </div>
+            <ActionButton editing={editing.favorite} disabled={!currentUser || !data.contents.length} />
+          </form>
+
+          <div className="panel table-panel">
+            <TableTitle title="Favoriten" count={data.favorites.length} />
+            <table>
+              <thead>
+                <tr>
+                  <th>Inhalt</th>
+                  <th>Benutzer</th>
+                  <th>Datum</th>
+                  <th aria-label="Aktionen" />
+                </tr>
+              </thead>
+              <tbody>
+                {data.favorites.map((favorite) => (
+                  <tr key={favorite.id}>
+                    <td>{contentMap.get(favorite.contentId) ?? favorite.contentId}</td>
+                    <td>{userMap.get(favorite.userId) ?? favorite.userId}</td>
+                    <td>{formatDate(favorite.favoriteDate)}</td>
+                    <RowActions
+                      onEdit={() => editFavorite(favorite)}
+                      onDelete={() => removeItem("favorites", favorite.id)}
+                    />
+                  </tr>
+                ))}
+                <EmptyRow visible={data.favorites.length === 0} columns={4} label="Noch keine Favoriten" />
               </tbody>
             </table>
           </div>

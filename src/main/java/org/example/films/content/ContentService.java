@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.example.films.category.CategoryRepository;
 import org.example.films.common.NotFoundException;
+import org.example.films.favorite.FavoriteRepository;
 import org.example.films.rating.Rating;
 import org.example.films.rating.RatingRepository;
 import org.example.films.watched.WatchedRepository;
@@ -16,24 +17,31 @@ public class ContentService {
     private final CategoryRepository categoryRepository;
     private final RatingRepository ratingRepository;
     private final WatchedRepository watchedRepository;
+    private final FavoriteRepository favoriteRepository;
 
     public ContentService(
             ContentRepository contentRepository,
             CategoryRepository categoryRepository,
             RatingRepository ratingRepository,
-            WatchedRepository watchedRepository
+            WatchedRepository watchedRepository,
+            FavoriteRepository favoriteRepository
     ) {
         this.contentRepository = contentRepository;
         this.categoryRepository = categoryRepository;
         this.ratingRepository = ratingRepository;
         this.watchedRepository = watchedRepository;
+        this.favoriteRepository = favoriteRepository;
     }
 
-    public List<Content> findAll(String categoryId) {
-        if (categoryId != null && !categoryId.isBlank()) {
-            return contentRepository.findByCategoryIdsContaining(categoryId);
-        }
-        return contentRepository.findAll();
+    public List<Content> findAll(String categoryId, ContentType type, Double minRating) {
+        List<Content> contents = categoryId != null && !categoryId.isBlank()
+                ? contentRepository.findByCategoryIdsContaining(categoryId)
+                : contentRepository.findAll();
+
+        return contents.stream()
+                .filter(content -> type == null || content.getType() == type)
+                .filter(content -> minRating == null || content.getAverageRating() >= minRating)
+                .toList();
     }
 
     public Content get(String id) {
@@ -57,6 +65,7 @@ public class ContentService {
         Content content = get(id);
         ratingRepository.deleteByContentId(id);
         watchedRepository.deleteByContentId(id);
+        favoriteRepository.deleteByContentId(id);
         contentRepository.delete(content);
     }
 

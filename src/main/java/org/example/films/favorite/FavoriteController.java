@@ -1,4 +1,4 @@
-package org.example.films.content;
+package org.example.films.favorite;
 
 import java.util.List;
 
@@ -17,43 +17,42 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/contents")
-public class ContentController {
+@RequestMapping("/api/favorites")
+public class FavoriteController {
 
-    private final ContentService contentService;
+    private final FavoriteService favoriteService;
 
-    public ContentController(ContentService contentService) {
-        this.contentService = contentService;
+    public FavoriteController(FavoriteService favoriteService) {
+        this.favoriteService = favoriteService;
     }
 
     @GetMapping
-    public List<Content> findAll(
-            @RequestParam(required = false) String categoryId,
-            @RequestParam(required = false) ContentType type,
-            @RequestParam(required = false) Double minRating
+    public List<Favorite> findAll(
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) String contentId
     ) {
-        return contentService.findAll(categoryId, type, minRating);
+        return favoriteService.findAll(userId, contentId);
     }
 
     @GetMapping("/{id}")
-    public Content get(@PathVariable String id) {
-        return contentService.get(id);
+    public Favorite get(@PathVariable String id) {
+        return favoriteService.get(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Content create(@Valid @RequestBody ContentRequest request) {
-        return contentService.create(request);
+    public Favorite create(@Valid @RequestBody FavoriteRequest request) {
+        return favoriteService.create(request);
     }
 
     @PutMapping("/{id}")
-    public Content update(@PathVariable String id, @Valid @RequestBody ContentRequest request) {
-        return contentService.update(id, request);
+    public Favorite update(@PathVariable String id, @Valid @RequestBody FavoriteRequest request) {
+        return favoriteService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id) {
-        contentService.delete(id);
+        favoriteService.delete(id);
     }
 }

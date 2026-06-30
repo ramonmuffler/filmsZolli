@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.example.films.common.NotFoundException;
 import org.example.films.content.ContentService;
+import org.example.films.favorite.FavoriteRepository;
 import org.example.films.rating.RatingRepository;
 import org.example.films.watched.WatchedRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -16,6 +17,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RatingRepository ratingRepository;
     private final WatchedRepository watchedRepository;
+    private final FavoriteRepository favoriteRepository;
     private final ContentService contentService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -23,11 +25,13 @@ public class UserService {
             UserRepository userRepository,
             RatingRepository ratingRepository,
             WatchedRepository watchedRepository,
+            FavoriteRepository favoriteRepository,
             ContentService contentService
     ) {
         this.userRepository = userRepository;
         this.ratingRepository = ratingRepository;
         this.watchedRepository = watchedRepository;
+        this.favoriteRepository = favoriteRepository;
         this.contentService = contentService;
     }
 
@@ -68,6 +72,7 @@ public class UserService {
                 .toList();
         ratingRepository.deleteByUserId(id);
         watchedRepository.deleteByUserId(id);
+        favoriteRepository.deleteByUserId(id);
         userRepository.delete(user);
         affectedContentIds.forEach(contentService::updateAverageRating);
     }

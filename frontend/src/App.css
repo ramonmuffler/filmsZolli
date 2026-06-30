@@ -104,7 +104,7 @@ h2 {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(112px, 1fr));
+  grid-template-columns: repeat(5, minmax(112px, 1fr));
   gap: 8px;
   margin: 20px 0;
 }
@@ -334,6 +334,23 @@ h2 {
   font-weight: 700;
 }
 
+.filter-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e8e2d8;
+  background: #fbfaf7;
+}
+
+.filter-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -497,8 +514,13 @@ tr:last-child td {
   }
 
   .auth-toggle,
-  .auth-form .primary-button {
+  .auth-form .primary-button,
+  .filter-actions {
     grid-column: 1 / -1;
+  }
+
+  .filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -525,7 +547,8 @@ tr:last-child td {
 
   .tabs,
   .form-grid,
-  .auth-form {
+  .auth-form,
+  .filter-bar {
     grid-template-columns: 1fr;
   }
 
@@ -539,7 +562,7 @@ tr:last-child td {
   }
 
   table {
-    min-width: 720px;
+    min-width: 820px;
   }
 
   .table-panel {
